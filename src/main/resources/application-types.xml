@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<types:mule xmlns:types="http://www.mulesoft.org/schema/mule/types">
+  <types:catalog>
+    <types:type name="profileMetaData" format="json">
+      <types:shape format="weave" example="examples/sampleProfile.json"><![CDATA[%dw 2.0
+
+type profileMetaData = {|
+  username: String, 
+  password: String
+|} {"example": "{\\\"username\\\":\\\"michaelreyes00007\\\",\\\"password\\\":\\\"Test1234\\\"}"}
+
+]]></types:shape>
+    </types:type>
+    <types:type name="profileMetaDataXml" format="xml">
+      <types:example format="xml" element="profile" location="examples/sampleProfile.xml"/>
+    </types:type>
+  </types:catalog>
+  <types:enrichment select="#6304ed60-5f11-472c-a62c-8466e71f637f">
+    <types:processor-declaration>
+      <types:input-event>
+        <types:message>
+          <types:payload type="profileMetaData"/>
+        </types:message>
+      </types:input-event>
+      <types:output-event>
+        <types:message>
+          <types:payload type="profileMetaDataXml"/>
+        </types:message>
+      </types:output-event>
+    </types:processor-declaration>
+  </types:enrichment>
+</types:mule>

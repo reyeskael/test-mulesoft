@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:crypto="http://www.mulesoft.org/schema/mule/crypto" xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:oauth2-provider="http://www.mulesoft.org/schema/mule/oauth2-provider"
+	xmlns:oauth="http://www.mulesoft.org/schema/mule/oauth" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/oauth http://www.mulesoft.org/schema/mule/oauth/current/mule-oauth.xsd
+http://www.mulesoft.org/schema/mule/oauth2-provider http://www.mulesoft.org/schema/mule/oauth2-provider/current/mule-oauth2-provider.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/crypto http://www.mulesoft.org/schema/mule/crypto/current/mule-crypto.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="1986c58a-2526-4c0c-9e01-126caf612fdd" basePath="api/v1" >
+		<http:listener-connection host="0.0.0.0" port="8081" readTimeout="60000" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="815fa778-510f-43b4-a6d0-4e6df353675f" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="mydb123" database="testmulesoft" />
+	</db:config>
+	<os:object-store name="Client_object_store" doc:name="Object store" doc:id="50c486d5-0de2-437b-987b-38e481d9fa8e" />
+	<os:object-store name="Token_object_store" doc:name="Object store" doc:id="a67b1b9d-ac9a-4964-bea0-d413b31dc132" />
+	<oauth2-provider:config name="OAuth2_Provider_Config" doc:name="OAuth2 Provider Config" doc:id="a422b8c1-fc70-4c88-bfa9-68d4a02981bd" listenerConfig="HTTP_Listener_config" clientStore="Client_object_store" supportedGrantTypes="CLIENT_CREDENTIALS" >
+		<oauth2-provider:token-config tokenStore="Token_object_store" path="/api/v1/token"/>
+	</oauth2-provider:config>
+	<flow name="test-mulesoftFlow1" doc:id="e1ad9eb3-5e70-4945-8957-47d50a52e63a" >
+		<http:listener doc:name="Listener" doc:id="9040da7d-7b33-43ac-9270-614b604c0d86" config-ref="HTTP_Listener_config" path="testEncryption"/>
+		<set-variable value="#[payload]" doc:name="Prepare Profile Payload" doc:id="677401d0-586a-4fd7-bed2-417c044cfb5d" variableName="requestBody" />
+		<crypto:pgp-encrypt doc:name="Pgp encrypt" doc:id="a703aa48-737b-452c-a3cd-6e61966bdfb6" >
+			<crypto:content ><![CDATA[#[vars.requestBody.password]]]></crypto:content>
+		</crypto:pgp-encrypt>
+	</flow>
+	<flow name="test-mulesoftFlow" doc:id="37f2c18c-60fc-4c35-a820-e639cfda8357" >
+		<http:listener doc:id="5997fb4c-2c62-4cc8-afa0-0d84ccea1208" doc:name="Listener" path="profileTest" allowedMethods="POST" config-ref="HTTP_Listener_config"/>
+		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="19bb5b04-0aa6-4b7e-a672-46c8438efc45" variableName="requestBody"/>
+		<ee:transform doc:name="Transform Message" doc:id="6304ed60-5f11-472c-a62c-8466e71f637f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+---
+{
+	profile: {
+		username: payload.username,
+		password: payload.password
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="profile_POST" doc:id="af08fb2a-8c9a-4b38-9ba9-cb5832df5432" >
+		<http:listener doc:name="Listener" doc:id="26906337-9b30-4992-af81-a7f19887f525" config-ref="HTTP_Listener_config" path="profile" allowedMethods="POST"/>
+		<logger level="INFO" doc:name="Start Logger" doc:id="53f30620-f3ef-4691-84ad-bfadddc7e980" message="Start /profile POST"/>
+		<set-variable value="#[payload]" doc:name="Prepare Profile Payload" doc:id="9d7aa5bb-93d9-44da-af20-29b4f5541490" variableName="requestBody"/>
+		<db:insert doc:name="Insert Profile in Database" doc:id="d0d14277-128d-4045-ad40-ebb3c6b36fe4" config-ref="Database_Config" autoGenerateKeys="true">
+			<db:sql ><![CDATA[INSERT INTO profile (username, password) VALUES (:username, :password);]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	username: vars.requestBody.username,
+	password: vars.requestBody.password
+}]]]></db:input-parameters>
+			<db:auto-generated-keys-column-names >
+				<db:auto-generated-keys-column-name value="id" />
+			</db:auto-generated-keys-column-names>
+		</db:insert>
+		<oauth2-provider:create-client doc:name="Create Ouath Client" doc:id="338e2d36-407b-4bda-a960-ab1c2263439f" config-ref="OAuth2_Provider_Config" clientId="#[vars.requestBody.username]" type="CONFIDENTIAL" secret="#[vars.requestBody.password]" redirectUris='#[["google.com"]]' authorizedGrantTypes='#[["CLIENT_CREDENTIALS"]]' failIfPresent="true" />
+		<ee:transform doc:name="Prepare Profile Response" doc:id="e6d0a226-f797-45b2-9c34-0a06b5190a90" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"id": payload.generatedKeys.GENERATED_KEY
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="End Logger" doc:id="46ee0a73-31e3-47f4-b993-699b6f9a53fd" message="End /profile POST"/>
+	</flow>
+	<flow name="profile_GET" doc:id="4d7d2578-4f48-4c7a-8bac-d2252ea5a416" >
+		<http:listener doc:name="Listener" doc:id="f9cf3e58-a10c-4e60-94b7-f195780895e3" config-ref="HTTP_Listener_config" path="profile/{id}" allowedMethods="GET"/>
+		<logger level="INFO" doc:name="Start Logger" doc:id="1c0dd4fb-ff50-446a-a5b9-36a9b65a9e1c" message="Start /profile GET" />
+		<set-variable value="#[payload]" doc:name="Prepare Profile Payload" doc:id="4c0ba703-4793-45d4-9d38-c56900c25569" variableName="requestBody" />
+		<oauth2-provider:validate-token doc:name="Validate token" doc:id="809c6288-4016-416c-991d-3e14f24d7dfa" config-ref="OAuth2_Provider_Config" />
+		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="a98c5d23-cf03-410d-9327-0ce607159606" variableName="Set Token Information"/>
+		<db:select doc:name="Select Profile in Database" doc:id="ecaf2bdd-96be-40e8-98ab-2b9ffc565964" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT * FROM profile WHERE id = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id: attributes.uriParams.id
+}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Prepare Profile Response" doc:id="7dba33f5-3e84-41ee-b507-06c0b7d78119">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload[0]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="End Logger" doc:id="b4f255c3-5e00-4952-aff5-3c1e0abab837" message="End /profile GET" />
+	</flow>
+	<flow name="profile_PATCH" doc:id="5cedcea8-1d75-4fa0-8c09-a33dc454fde1" >
+		<http:listener doc:name="Listener" doc:id="f1224745-73c1-4af5-8521-52465ff5272c" config-ref="HTTP_Listener_config" path="profile/{id}" allowedMethods="PATCH"/>
+		<logger level="INFO" doc:name="Start Logger" doc:id="b1cf5fde-6f97-49ef-aadf-1f76e0c678de" message="Start /profile PATCH" />
+		<set-variable value="#[payload]" doc:name="Prepare Profile Payload" doc:id="d7c9c218-fa6a-48a2-ae1d-701dc1a6b9d3" variableName="requestBody" />
+		<set-variable value="#[attributes.uriParams.id]" doc:name="Prepare Profile ID" doc:id="b470583a-fa03-47c7-bb34-4c7882603cc9" variableName="profileID"/>
+		<db:update doc:name="Update Profile in Database" doc:id="d43104f0-75e3-479b-841c-c7650d022944" config-ref="Database_Config">
+			<db:sql ><![CDATA[UPDATE profile SET username = :username, password = :password WHERE id = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id: vars.profileID,
+	username: vars.requestBody.username,
+	password: vars.requestBody.password
+}]]]></db:input-parameters>
+		</db:update>
+		<ee:transform doc:name="Prepare Profile Response" doc:id="93e9afbf-c69b-41a0-be94-a59b9807c002" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"id": vars.profileID
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="End Logger" doc:id="0cedbb77-c388-4aa2-8b15-0add95bb9533" message="End /profile PATCH" />
+	</flow>
+	<flow name="profile_DELETE" doc:id="b0d20989-8298-4532-b6c4-b74c0e755c8c" >
+		<http:listener doc:name="Listener" doc:id="4e9b1c7e-b5b3-4213-98c2-63d72c7fe2c6" config-ref="HTTP_Listener_config" path="profile/{id}" allowedMethods="DELETE"/>
+		<logger level="INFO" doc:name="Start Logger" doc:id="bf93dbdc-6324-4e3e-a5e6-40a56f8eba92" message="Start /profile DELETE" />
+		<set-variable value="#[attributes.uriParams.id]" doc:name="Prepare Profile ID" doc:id="6deb8f6d-df14-40c5-be7e-f79d98b2bce6" variableName="profileID" />
+		<db:delete doc:name="Delete Profile in Database" doc:id="175438a1-a07a-4a28-9f34-cffef895b348" config-ref="Database_Config">
+			<db:sql ><![CDATA[DELETE FROM profile WHERE id = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id: vars.profileID
+}]]]></db:input-parameters>
+		</db:delete>
+		<ee:transform doc:name="Prepare Profile Response" doc:id="b26b4ebe-7caf-4491-8b0f-3288c8cde7db" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"id": vars.profileID
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="End Logger" doc:id="0b5a3747-d97c-4d21-b33a-cd18993e0415" message="End /profile DELETE" />
+	</flow>
+</mule>
