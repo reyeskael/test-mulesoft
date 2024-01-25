@@ -21,13 +21,6 @@ http://www.mulesoft.org/schema/mule/crypto http://www.mulesoft.org/schema/mule/c
 	<oauth2-provider:config name="OAuth2_Provider_Config" doc:name="OAuth2 Provider Config" doc:id="a422b8c1-fc70-4c88-bfa9-68d4a02981bd" listenerConfig="HTTP_Listener_config" clientStore="Client_object_store" supportedGrantTypes="CLIENT_CREDENTIALS" >
 		<oauth2-provider:token-config tokenStore="Token_object_store" path="/api/v1/token"/>
 	</oauth2-provider:config>
-	<flow name="test-mulesoftFlow1" doc:id="e1ad9eb3-5e70-4945-8957-47d50a52e63a" >
-		<http:listener doc:name="Listener" doc:id="9040da7d-7b33-43ac-9270-614b604c0d86" config-ref="HTTP_Listener_config" path="testEncryption"/>
-		<set-variable value="#[payload]" doc:name="Prepare Profile Payload" doc:id="677401d0-586a-4fd7-bed2-417c044cfb5d" variableName="requestBody" />
-		<crypto:pgp-encrypt doc:name="Pgp encrypt" doc:id="a703aa48-737b-452c-a3cd-6e61966bdfb6" >
-			<crypto:content ><![CDATA[#[vars.requestBody.password]]]></crypto:content>
-		</crypto:pgp-encrypt>
-	</flow>
 	<flow name="test-mulesoftFlow" doc:id="37f2c18c-60fc-4c35-a820-e639cfda8357" >
 		<http:listener doc:id="5997fb4c-2c62-4cc8-afa0-0d84ccea1208" doc:name="Listener" path="profileTest" allowedMethods="POST" config-ref="HTTP_Listener_config"/>
 		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="19bb5b04-0aa6-4b7e-a672-46c8438efc45" variableName="requestBody"/>
@@ -75,13 +68,13 @@ output application/json
 	<flow name="profile_GET" doc:id="4d7d2578-4f48-4c7a-8bac-d2252ea5a416" >
 		<http:listener doc:name="Listener" doc:id="f9cf3e58-a10c-4e60-94b7-f195780895e3" config-ref="HTTP_Listener_config" path="profile/{id}" allowedMethods="GET"/>
 		<logger level="INFO" doc:name="Start Logger" doc:id="1c0dd4fb-ff50-446a-a5b9-36a9b65a9e1c" message="Start /profile GET" />
-		<set-variable value="#[payload]" doc:name="Prepare Profile Payload" doc:id="4c0ba703-4793-45d4-9d38-c56900c25569" variableName="requestBody" />
+		<set-variable value="#[attributes.uriParams.id]" doc:name="Prepare Profile ID" doc:id="4c0ba703-4793-45d4-9d38-c56900c25569" variableName="profileId" />
 		<oauth2-provider:validate-token doc:name="Validate token" doc:id="809c6288-4016-416c-991d-3e14f24d7dfa" config-ref="OAuth2_Provider_Config" />
 		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="a98c5d23-cf03-410d-9327-0ce607159606" variableName="Set Token Information"/>
 		<db:select doc:name="Select Profile in Database" doc:id="ecaf2bdd-96be-40e8-98ab-2b9ffc565964" config-ref="Database_Config">
 			<db:sql ><![CDATA[SELECT * FROM profile WHERE id = :id]]></db:sql>
 			<db:input-parameters ><![CDATA[#[{
-	id: attributes.uriParams.id
+	id: vars.profileId
 }]]]></db:input-parameters>
 		</db:select>
 		<ee:transform doc:name="Prepare Profile Response" doc:id="7dba33f5-3e84-41ee-b507-06c0b7d78119">
