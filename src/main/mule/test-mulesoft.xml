@@ -99,6 +99,7 @@ payload[0]]]></ee:set-payload>
 		<logger level="INFO" doc:name="Start Logger" doc:id="b1cf5fde-6f97-49ef-aadf-1f76e0c678de" message="Start /profile PATCH" />
 		<set-variable value="#[payload]" doc:name="Prepare Profile Payload" doc:id="d7c9c218-fa6a-48a2-ae1d-701dc1a6b9d3" variableName="requestBody" />
 		<set-variable value="#[attributes.uriParams.id]" doc:name="Prepare Profile ID" doc:id="b470583a-fa03-47c7-bb34-4c7882603cc9" variableName="profileID"/>
+		<oauth2-provider:validate-token doc:name="Validate token" doc:id="a65a22d8-a91b-4852-ba74-20733aacfc93" config-ref="OAuth2_Provider_Config" />
 		<db:update doc:name="Update Profile in Database" doc:id="d43104f0-75e3-479b-841c-c7650d022944" config-ref="Database_Config">
 			<db:sql ><![CDATA[UPDATE profile SET username = :username, password = :password WHERE id = :id]]></db:sql>
 			<db:input-parameters ><![CDATA[#[{
@@ -123,6 +124,7 @@ output application/json
 		<http:listener doc:name="Listener" doc:id="4e9b1c7e-b5b3-4213-98c2-63d72c7fe2c6" config-ref="HTTP_Listener_config" path="profile/{id}" allowedMethods="DELETE"/>
 		<logger level="INFO" doc:name="Start Logger" doc:id="bf93dbdc-6324-4e3e-a5e6-40a56f8eba92" message="Start /profile DELETE" />
 		<set-variable value="#[attributes.uriParams.id]" doc:name="Prepare Profile ID" doc:id="6deb8f6d-df14-40c5-be7e-f79d98b2bce6" variableName="profileID" />
+		<oauth2-provider:validate-token doc:name="Validate token" doc:id="800064a0-dbf1-46d3-a113-722154bf6e07" config-ref="OAuth2_Provider_Config" />
 		<db:delete doc:name="Delete Profile in Database" doc:id="175438a1-a07a-4a28-9f34-cffef895b348" config-ref="Database_Config">
 			<db:sql ><![CDATA[DELETE FROM profile WHERE id = :id]]></db:sql>
 			<db:input-parameters ><![CDATA[#[{
