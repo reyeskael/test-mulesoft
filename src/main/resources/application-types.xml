@@ -15,16 +15,16 @@ type profileMetaData = {|
       <types:example format="xml" element="profile" location="examples/sampleProfile.xml"/>
     </types:type>
   </types:catalog>
-  <types:enrichment select="#6304ed60-5f11-472c-a62c-8466e71f637f">
+  <types:enrichment select="#1a82b763-1f69-4a3f-9b07-070b15e87bd5">
     <types:processor-declaration>
       <types:input-event>
         <types:message>
-          <types:payload type="profileMetaData"/>
+          <types:payload type="profileMetaDataXml"/>
         </types:message>
       </types:input-event>
       <types:output-event>
         <types:message>
-          <types:payload type="profileMetaDataXml"/>
+          <types:payload type="profileMetaData"/>
         </types:message>
       </types:output-event>
     </types:processor-declaration>

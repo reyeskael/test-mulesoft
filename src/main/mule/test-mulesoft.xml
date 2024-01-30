@@ -21,12 +21,16 @@ http://www.mulesoft.org/schema/mule/crypto http://www.mulesoft.org/schema/mule/c
 	<oauth2-provider:config name="OAuth2_Provider_Config" doc:name="OAuth2 Provider Config" doc:id="a422b8c1-fc70-4c88-bfa9-68d4a02981bd" listenerConfig="HTTP_Listener_config" clientStore="Client_object_store" supportedGrantTypes="CLIENT_CREDENTIALS" >
 		<oauth2-provider:token-config tokenStore="Token_object_store" path="/api/v1/token"/>
 	</oauth2-provider:config>
-	<flow name="test-mulesoftFlow" doc:id="37f2c18c-60fc-4c35-a820-e639cfda8357" >
-		<http:listener doc:id="5997fb4c-2c62-4cc8-afa0-0d84ccea1208" doc:name="Listener" path="profileTest" allowedMethods="POST" config-ref="HTTP_Listener_config"/>
-		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="19bb5b04-0aa6-4b7e-a672-46c8438efc45" variableName="requestBody"/>
-		<ee:transform doc:name="Transform Message" doc:id="6304ed60-5f11-472c-a62c-8466e71f637f" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+	<flow name="objectMapper_POST" doc:id="37f2c18c-60fc-4c35-a820-e639cfda8357" >
+		<http:listener doc:id="5997fb4c-2c62-4cc8-afa0-0d84ccea1208" doc:name="Listener" path="objectMapper/{objectType}" allowedMethods="POST" config-ref="HTTP_Listener_config"/>
+		<logger level="INFO" doc:name="Start Logger" doc:id="80882a10-26ec-4590-aec8-49be93b8366c" message="Start /objectMapper POST" />
+		<set-variable value="#[payload]" doc:name="Prepare Object Mapper Payload" doc:id="f3c05ae4-53ac-4a92-8a26-7070833de5aa" variableName="requestBody" />
+		<set-variable value="#[attributes.uriParams.objectType]" doc:name="Prepare Object Mapper Type" doc:id="c84f4dfb-94bf-4896-a04c-e8afbc098361" variableName="objectType" />
+		<choice doc:name="Choice" doc:id="45037b9f-3ff2-4b7c-ba9d-78079b5929b3" >
+			<when expression='#[vars.objectType == "xml"]'>
+				<ee:transform doc:name="Transform JSON to XML" doc:id="6304ed60-5f11-472c-a62c-8466e71f637f">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/xml
 ---
 {
@@ -37,6 +41,26 @@ output application/xml
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+			</when>
+			<when expression='#[vars.objectType == "json"]'>
+				<ee:transform doc:name="Transform XML to JSON" doc:id="1a82b763-1f69-4a3f-9b07-070b15e87bd5">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	username: payload.profile.username,
+	password: payload.profile.password
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			
+</when>
+			<otherwise>
+				<set-payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	message: "Unrecognized object type."&#10;}]' doc:name="Set Default Payload" doc:id="438bcf27-c77e-45d4-a818-ac2deb9f053a" />
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="End Logger" doc:id="c023f510-3eb2-4775-9f4a-bbdb10263ce2" message="End /objectMapper POST" />
 	</flow>
 	<flow name="profile_POST" doc:id="af08fb2a-8c9a-4b38-9ba9-cb5832df5432" >
 		<http:listener doc:name="Listener" doc:id="26906337-9b30-4992-af81-a7f19887f525" config-ref="HTTP_Listener_config" path="profile" allowedMethods="POST"/>
