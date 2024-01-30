@@ -29,4 +29,18 @@ type profileMetaData = {|
       </types:output-event>
     </types:processor-declaration>
   </types:enrichment>
+  <types:enrichment select="#6304ed60-5f11-472c-a62c-8466e71f637f">
+    <types:processor-declaration>
+      <types:input-event>
+        <types:message>
+          <types:payload type="profileMetaData"/>
+        </types:message>
+      </types:input-event>
+      <types:output-event>
+        <types:message>
+          <types:payload type="profileMetaDataXml"/>
+        </types:message>
+      </types:output-event>
+    </types:processor-declaration>
+  </types:enrichment>
 </types:mule>
