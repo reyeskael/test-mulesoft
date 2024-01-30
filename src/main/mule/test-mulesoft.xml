@@ -94,14 +94,16 @@ output application/json
 		<logger level="INFO" doc:name="Start Logger" doc:id="1c0dd4fb-ff50-446a-a5b9-36a9b65a9e1c" message="Start /profile GET" />
 		<set-variable value="#[attributes.uriParams.id]" doc:name="Prepare Profile ID" doc:id="4c0ba703-4793-45d4-9d38-c56900c25569" variableName="profileId" />
 		<oauth2-provider:validate-token doc:name="Validate token" doc:id="809c6288-4016-416c-991d-3e14f24d7dfa" config-ref="OAuth2_Provider_Config" />
-		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="a98c5d23-cf03-410d-9327-0ce607159606" variableName="Set Token Information"/>
+		<set-variable value="#[payload]" doc:name="Store Token" doc:id="a98c5d23-cf03-410d-9327-0ce607159606" variableName="token"/>
 		<db:select doc:name="Select Profile in Database" doc:id="ecaf2bdd-96be-40e8-98ab-2b9ffc565964" config-ref="Database_Config">
 			<db:sql ><![CDATA[SELECT * FROM profile WHERE id = :id]]></db:sql>
 			<db:input-parameters ><![CDATA[#[{
 	id: vars.profileId
 }]]]></db:input-parameters>
 		</db:select>
-		<ee:transform doc:name="Prepare Profile Response" doc:id="7dba33f5-3e84-41ee-b507-06c0b7d78119">
+		<choice doc:name="Choice" doc:id="a3a0c0e4-e4ff-4d71-a499-e47070442b3c" >
+			<when expression="#[payload[0].username == vars.token.client_id]">
+				<ee:transform doc:name="Prepare Profile Response" doc:id="7dba33f5-3e84-41ee-b507-06c0b7d78119">
 			<ee:message>
 				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -109,6 +111,11 @@ output application/json
 payload[0]]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+			</when>
+			<otherwise >
+				<set-payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"message": "Unauthorized"&#10;}]' doc:name="Set Payload" doc:id="c8ab1b92-088e-4f43-834f-c2da9138ec10" />
+			</otherwise>
+		</choice>
 		<logger level="INFO" doc:name="End Logger" doc:id="b4f255c3-5e00-4952-aff5-3c1e0abab837" message="End /profile GET" />
 	</flow>
 	<flow name="profile_PATCH" doc:id="5cedcea8-1d75-4fa0-8c09-a33dc454fde1" >
@@ -142,15 +149,25 @@ output application/json
 		<logger level="INFO" doc:name="Start Logger" doc:id="bf93dbdc-6324-4e3e-a5e6-40a56f8eba92" message="Start /profile DELETE" />
 		<set-variable value="#[attributes.uriParams.id]" doc:name="Prepare Profile ID" doc:id="6deb8f6d-df14-40c5-be7e-f79d98b2bce6" variableName="profileID" />
 		<oauth2-provider:validate-token doc:name="Validate token" doc:id="800064a0-dbf1-46d3-a113-722154bf6e07" config-ref="OAuth2_Provider_Config" />
-		<db:delete doc:name="Delete Profile in Database" doc:id="175438a1-a07a-4a28-9f34-cffef895b348" config-ref="Database_Config">
-			<db:sql ><![CDATA[DELETE FROM profile WHERE id = :id]]></db:sql>
-			<db:input-parameters ><![CDATA[#[{
+		<set-variable value="#[payload]" doc:name="Store Token" doc:id="4e32d2a7-032f-4b03-8ec4-102f29e8fbb8" variableName="token" />
+		<db:select doc:name="Select Profile in Database" doc:id="cf803e9a-e481-42c7-8c4f-7bbf394c4454" config-ref="Database_Config">
+			<db:sql><![CDATA[SELECT * FROM profile WHERE id = :id]]></db:sql>
+			<db:input-parameters><![CDATA[#[{
+	id: vars.profileId
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="2f3c54fb-016d-4dd7-81ab-bddb597853ce">
+			<when expression="#[payload[0].username == vars.token.client_id]">
+				<db:delete doc:name="Delete Profile in Database" doc:id="175438a1-a07a-4a28-9f34-cffef895b348" config-ref="Database_Config">
+			<db:sql><![CDATA[DELETE FROM profile WHERE id = :id]]></db:sql>
+			<db:input-parameters><![CDATA[#[{
 	id: vars.profileID
 }]]]></db:input-parameters>
 		</db:delete>
-		<ee:transform doc:name="Prepare Profile Response" doc:id="b26b4ebe-7caf-4491-8b0f-3288c8cde7db" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+				<oauth2-provider:delete-client doc:name="Delete client" doc:id="7764e886-7a40-4d8e-a3df-2f79f6edfa61" config-ref="OAuth2_Provider_Config" clientId="#[vars.token.client_id]" />
+				<ee:transform doc:name="Prepare Profile Response" doc:id="b26b4ebe-7caf-4491-8b0f-3288c8cde7db">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -158,6 +175,11 @@ output application/json
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+			</when>
+			<otherwise>
+				<set-payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"message": "Unauthorized"&#10;}]' doc:name="Set Payload" doc:id="eedbb933-9524-4347-9a5d-bcac68f78c1a" />
+			</otherwise>
+		</choice>
 		<logger level="INFO" doc:name="End Logger" doc:id="0b5a3747-d97c-4d21-b33a-cd18993e0415" message="End /profile DELETE" />
 	</flow>
 </mule>
