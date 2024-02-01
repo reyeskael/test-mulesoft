@@ -124,17 +124,19 @@ payload[0]]]></ee:set-payload>
 		<set-variable value="#[payload]" doc:name="Prepare Profile Payload" doc:id="d7c9c218-fa6a-48a2-ae1d-701dc1a6b9d3" variableName="requestBody" />
 		<set-variable value="#[attributes.uriParams.id]" doc:name="Prepare Profile ID" doc:id="b470583a-fa03-47c7-bb34-4c7882603cc9" variableName="profileID"/>
 		<oauth2-provider:validate-token doc:name="Validate token" doc:id="a65a22d8-a91b-4852-ba74-20733aacfc93" config-ref="OAuth2_Provider_Config" />
-		<db:update doc:name="Update Profile in Database" doc:id="d43104f0-75e3-479b-841c-c7650d022944" config-ref="Database_Config">
-			<db:sql ><![CDATA[UPDATE profile SET username = :username, password = :password WHERE id = :id]]></db:sql>
-			<db:input-parameters ><![CDATA[#[{
+		<choice doc:name="Choice" doc:id="0f142f7e-5242-4b3c-864b-fb1246772c36">
+			<when expression="#[payload[0].username == vars.token.client_id]">
+				<db:update doc:name="Update Profile in Database" doc:id="d43104f0-75e3-479b-841c-c7650d022944" config-ref="Database_Config">
+			<db:sql><![CDATA[UPDATE profile SET username = :username, password = :password WHERE id = :id]]></db:sql>
+			<db:input-parameters><![CDATA[#[{
 	id: vars.profileID,
 	username: vars.requestBody.username,
 	password: vars.requestBody.password
 }]]]></db:input-parameters>
 		</db:update>
-		<ee:transform doc:name="Prepare Profile Response" doc:id="93e9afbf-c69b-41a0-be94-a59b9807c002" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+				<ee:transform doc:name="Prepare Profile Response" doc:id="93e9afbf-c69b-41a0-be94-a59b9807c002">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -142,6 +144,11 @@ output application/json
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
+			</when>
+			<otherwise>
+				<set-payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"message": "Unauthorized"&#10;}]' doc:name="Set Payload" doc:id="96cb4501-eb59-48f6-92a3-25b8fb136e2c" />
+			</otherwise>
+		</choice>
 		<logger level="INFO" doc:name="End Logger" doc:id="0cedbb77-c388-4aa2-8b15-0add95bb9533" message="End /profile PATCH" />
 	</flow>
 	<flow name="profile_DELETE" doc:id="b0d20989-8298-4532-b6c4-b74c0e755c8c" >
